@@ -3,7 +3,7 @@ import numpy as np
 import pyaudio as pau
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
-
+import time
 
 # Deklaracja zmiennych globalnych
 CHUNK = 1024 # Ilość próbek przetwarzana przy każdej operacji "read", 
@@ -15,6 +15,8 @@ FORMAT = pau.paInt16 # ustawienie formatu hexadecymalnego
 CHANNELS = 1 # Ilość kanałów audio, 1 dla dźwięku MONO, 2 dla STEREO
 RATE = 48000 # [Hz] określenie częstotliwości próbkowania
 
+# deklaracja zmiennej pomocniczej
+last_maxdb_update = time.time()
 def on_key(event):
     """W wypadku zarejestrowania zdarzenia wyłącza wyświetlanie wykresów (zamyka je)
 
@@ -25,6 +27,21 @@ def on_key(event):
     
     plt.close()
     
+    
+def amplitude_to_db(amplitude):
+    """Konwersja amplitudy w formacie int do decybeli
+
+    Args:
+        amplitude (paInt16): wartość amplitudy wyznaczona w formacie integer16 (-32768, 32768)
+
+    Returns:
+        amplitude (decibels): wartość amplitudy wyznaczona w decybelach po konwersji
+    """
+    # zabezpieczenie przed zwróceniem wartości 0, nieakceptowalnej do użycia w logarytmie
+    amplitude = np.maximum(amplitude / 32767.0, 1e-9)
+    return 20 * np.log10(amplitude)
+                         
+                         
 def update_plot(frame):
     """Aktualizuje wyświetlanie wykresów w każdej klatce
 
@@ -35,18 +52,32 @@ def update_plot(frame):
         waveform_line: _description_,s
         spectrum_line: _description_
     """
+    global last_maxdb_update
+    
+    # Sczytanie danych z pojedynczej klatki
     data = stream.read(CHUNK, exception_on_overflow=False)
     audio_data = np.frombuffer(data, dtype=np.int16)
 
-    # Perform FFT
+    # Przeprowadzenie szybkiej transformaty Fourier'a
     fft_data = np.fft.fft(audio_data)
     frequencies = np.fft.fftfreq(len(fft_data), 1 / RATE)
 
-    # Update line data for the first plot (waveform)
+    # Konwersja danych do decybeli
+    magnitude = np.abs(fft_data[:len(fft_data) // 2])
+    db_magnitude = amplitude_to_db(magnitude)
+    
+    # Aktualizacja maksymalnego zarejestrowanego poziomu natężenia dźwięku co sekundę
+    current_time = time.time()
+    if current_time - last_maxdb_update >= 1.0:
+        max_db = np.max(db_magnitude)
+        
+        last_maxdb_update = current_time
+    
+    # Aktualizacja pierwszego wykresu
     waveform_line.set_ydata(audio_data)
 
-    # Update line data for the second plot (frequency spectrum)
-    spectrum_line.set_ydata(np.abs(fft_data[:len(fft_data) // 2]))
+    # Aktualizacja drugiego wykresu
+    spectrum_line.set_ydata(db_magnitude)
     return waveform_line, spectrum_line
 
 if __name__ == "__main__": 
@@ -98,11 +129,19 @@ if __name__ == "__main__":
     
     # Edycja wykresu
     ax2.set_title('Analiza spektralna przebiegu sygnału')
-    ax2.set_xlabel('Częstotliwość (Hz)')
-    ax2.set_ylabel('Amplituda')
+    ax2.set_xlabel('Częstotliwość f(Hz)')
+    ax2.set_ylabel('Poziom natężenia dźwięku L(dB)')
     ax2.set_xlim(0, RATE // 2)
-    ax2.set_ylim(100, 10000)  # Badany zakres częstotliwości
+    ax2.set_ylim(-50, 50)  # Badany zakres częstotliwości
     
+    # Dalsza konfiguracja wyglądu wykresu
+    for decade in range(-50, 50, 10):
+        ax2.axhline(y=decade, color='gray', linestyle='-', linewidth=0.5)
+    for semidecade in range(-45, 45, 10):
+        ax2.axhline(y=semidecade, color='lightgray', linestyle='-', linewidth=0.33)
+    for xdecade in range(0,RATE//2,100):
+        ax2.axvline(x=xdecade,color='lightgray',linestyle='-', linewidth=0.33)
+        
     try:
         while plt.fignum_exists(fig.number):
             ani = animation.FuncAnimation(fig, update_plot, blit=True, interval=50)
