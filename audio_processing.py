@@ -17,6 +17,7 @@ RATE = 48000 # [Hz] określenie częstotliwości próbkowania
 
 # deklaracja zmiennej pomocniczej
 last_maxdb_update = time.time()
+
 def on_key(event):
     """W wypadku zarejestrowania zdarzenia wyłącza wyświetlanie wykresów (zamyka je)
 
@@ -26,8 +27,7 @@ def on_key(event):
     print("Klawisz naciśnięty, zamykam okno.")
     
     plt.close()
-    
-    
+
 def amplitude_to_db(amplitude):
     """Konwersja amplitudy w formacie int do decybeli
 
@@ -42,7 +42,18 @@ def amplitude_to_db(amplitude):
     amplitude = np.maximum(amplitude / 32767.0, 1e-9) # normalizacja wartości amplitudy z formatu 16bit (-32768,32767) do zakresu (-1,1)
     return 20 * np.log10(amplitude)
                          
-                         
+def generate_whitenoise(duration=60):
+    """Tworzy biały szum o długości trwania duration (podstawowo 60 sekund)
+
+    Args:
+        duration (int, optional): _description_. Jeśli nie zadeklarowano inaczej, podstawowo trwa 60 sekund.
+
+    Returns:
+        _type_: zwraca sygnał typu biały szum
+    """
+    white_noise = np.random.randn(RATE*duration)
+    return (white_noise * 32767).astype(np.int16)
+                   
 def update_plot(frame):
     """Aktualizuje wyświetlanie wykresów w każdej klatce
 
@@ -158,13 +169,14 @@ if __name__ == "__main__":
         ax2.axvline(x=xdecade,color='lightgray',linestyle='-', linewidth=0.33)
         
     try:
-        ani = animation.FuncAnimation(fig, update_plot, blit=True, interval=50)
-        plt.show()
+        while plt.fignum_exists(fig.number):
+            ani = animation.FuncAnimation(fig, update_plot, blit=False, interval=50, cache_frame_data=False) # zabezpieczenie przed używaniem nadmiernej ilości pamięci poprzez ustawienie cache_frame_data na wartość False
+            plt.show()
     except KeyboardInterrupt:
         stream.close() # zamknięcie kanału głosowego w wypadku naciśnięcia klawisza klawiatury przez użytkownika
         print("Zakonczono analize sygnalu")
-    
-    p.terminate() # usuniecie obiektu p klasy PyAudio
+    finally:
+        p.terminate() # zapewnienie stałego zamknięcia kanału głosowego po zakończeniu pracy programu
 
 '''
 Known problems:
