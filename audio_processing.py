@@ -78,9 +78,9 @@ def update_plot(frame):
     
     audio_data = np.frombuffer(data, dtype=np.int16) # konwersja danych do tablicy 16-bitowych integerów
     
-    # Przeprowadzenie szybkiej transformaty Fourier'a
+    # Przeprowadzenie szybkiej transformaty Fouriera
     fft_data = np.fft.fft(audio_data) # przejście z domeny czasu na domenę częstotliwości (liczby złożone)
-    frequencies = np.fft.fftfreq(len(fft_data), 1 / RATE)
+    #frequencies = np.fft.fftfreq(len(fft_data), 1 / RATE)
 
     # Konwersja danych do decybeli
     magnitude = np.abs(fft_data[:len(fft_data) // 2])
@@ -158,13 +158,15 @@ if __name__ == "__main__":
     ax2.set_xlabel('Częstotliwość f(Hz)')
     ax2.set_ylabel('Poziom natężenia dźwięku L(dB)')
     ax2.set_xlim(20, RATE / 2)
-    ax2.set_ylim(-50, 50)  # Badany zakres częstotliwości
+    ax2.set_ylim(-50, 60)  # Badany zakres częstotliwości
     
     # Dalsza konfiguracja wyglądu wykresu
     for decade in range(-50, 50, 10):
-        ax2.axhline(y=decade, color='gray', linestyle='-', linewidth=0.5)
+        ax2.axhline(y=decade, color='darkgray', linestyle='-', linewidth=0.5)
     for semidecade in range(-45, 45, 10):
-        ax2.axhline(y=semidecade, color='lightgray', linestyle='-', linewidth=0.33)
+        ax2.axhline(y=semidecade, color='gray', linestyle='-', linewidth=0.33)
+    for quarterdecade in range(-42,42,5):
+        ax2.axhline(y=quarterdecade,color='lightgray',linestyle='--',linewidth=0.33)
     for xdecade in range(0,RATE//2,100):
         ax2.axvline(x=xdecade,color='lightgray',linestyle='-', linewidth=0.33)
         
