@@ -161,11 +161,11 @@ if __name__ == "__main__":
     ax2.set_ylim(-50, 60)  # Badany zakres częstotliwości
     
     # Dalsza konfiguracja wyglądu wykresu
-    for decade in range(-50, 50, 10):
+    for decade in range(-50, 60, 10):
         ax2.axhline(y=decade, color='darkgray', linestyle='-', linewidth=0.5)
-    for semidecade in range(-45, 45, 10):
+    for semidecade in range(-45, 65, 10):
         ax2.axhline(y=semidecade, color='gray', linestyle='-', linewidth=0.33)
-    for quarterdecade in range(-42,42,5):
+    for quarterdecade in range(-42,57,5):
         ax2.axhline(y=quarterdecade,color='lightgray',linestyle='--',linewidth=0.33)
     for xdecade in range(0,RATE//2,100):
         ax2.axvline(x=xdecade,color='lightgray',linestyle='-', linewidth=0.33)
