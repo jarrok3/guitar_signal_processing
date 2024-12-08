@@ -41,18 +41,6 @@ def amplitude_to_db(amplitude):
     # e przed zwróceniem wartości 0, nieakceptowalnej do użycia w logarytmie
     amplitude = np.maximum(amplitude / 32767.0, 1e-9) # normalizacja wartości amplitudy z formatu 16bit (-32768,32767) do zakresu (-1,1)
     return 20 * np.log10(amplitude)
-                         
-def generate_whitenoise(duration=60):
-    """Tworzy biały szum o długości trwania duration (podstawowo 60 sekund)
-
-    Args:
-        duration (int, optional): _description_. Jeśli nie zadeklarowano inaczej, podstawowo trwa 60 sekund.
-
-    Returns:
-        _type_: zwraca sygnał typu biały szum
-    """
-    white_noise = np.random.randn(RATE*duration)
-    return (white_noise * 32767).astype(np.int16)
                    
 def update_plot(frame):
     """Aktualizuje wyświetlanie wykresów w każdej klatce
@@ -80,7 +68,7 @@ def update_plot(frame):
     
     # Przeprowadzenie szybkiej transformaty Fouriera
     fft_data = np.fft.fft(audio_data) # przejście z domeny czasu na domenę częstotliwości (liczby złożone)
-    #frequencies = np.fft.fftfreq(len(fft_data), 1 / RATE)
+    frequencies = np.fft.fftfreq(len(fft_data), 1 / RATE)[:len(fft_data) // 2]  # Obliczenie osi X (częstotliwości)
 
     # Konwersja danych do decybeli
     magnitude = np.abs(fft_data[:len(fft_data) // 2])
@@ -90,7 +78,9 @@ def update_plot(frame):
     current_time = time.time()
     if current_time - last_maxdb_update >= 1.0:
         max_db = np.max(db_magnitude)
-        
+        # Filtracja częstotliwości, które mają wartość >= max_db - 3
+        freq_in_range = frequencies[db_magnitude >= (max_db - 5)]
+        print(f'Częstotliwości w zakresie do -3 dB od max: {freq_in_range}, f rezonansowa: {frequencies[db_magnitude >= max_db ]}')
         last_maxdb_update = current_time
     
     # Aktualizacja pierwszego wykresu
@@ -98,6 +88,7 @@ def update_plot(frame):
 
     # Aktualizacja drugiego wykresu
     spectrum_line.set_ydata(db_magnitude)
+    
     return waveform_line, spectrum_line
 
 if __name__ == "__main__": 
@@ -180,10 +171,4 @@ if __name__ == "__main__":
     finally:
         p.terminate() # zapewnienie stałego zamknięcia kanału głosowego po zakończeniu pracy programu
 
-'''
-Known problems:
-    OSError: [Errno -9981] Input overflowed
-For Chunk size 512, the system cannot handle the sampling quickly enough, and the buffer gets overflown
-Had to change chunk size to 1024 to tackle the problem
-'''
 
